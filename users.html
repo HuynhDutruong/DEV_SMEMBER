@@ -115,13 +115,19 @@
 
     // Kiểm tra trạng thái đăng nhập khi tải trang
     window.onload = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        loadUserInfo(user.id);
-      } else {
-        document.getElementById('loginForm').style.display = 'block';
-        document.getElementById('signupForm').style.display = 'none';
-        document.getElementById('userInfo').style.display = 'none';
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        if (user) {
+          loadUserInfo(user.id);
+        } else {
+          document.getElementById('loginForm').style.display = 'block';
+          document.getElementById('signupForm').style.display = 'none';
+          document.getElementById('userInfo').style.display = 'none';
+        }
+      } catch (error) {
+        console.error('Lỗi khi kiểm tra trạng thái đăng nhập:', error);
+        alert('Lỗi khi tải trang: ' + error.message);
       }
     };
 
@@ -141,118 +147,144 @@
 
     // Hàm đăng ký
     async function signup() {
-      const tenThanh = document.getElementById('tenThanh').value;
-      const fullName = document.getElementById('fullName').value;
-      const dob = document.getElementById('dob').value;
-      const email = document.getElementById('signupEmail').value;
-      const password = document.getElementById('signupPassword').value;
-      const confirmPassword = document.getElementById('confirmPassword').value;
+      try {
+        const tenThanh = document.getElementById('tenThanh').value;
+        const fullName = document.getElementById('fullName').value;
+        const dob = document.getElementById('dob').value;
+        const email = document.getElementById('signupEmail').value;
+        const password = document.getElementById('signupPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
 
-      if (!fullName || !email || !password || !confirmPassword) {
-        alert('Vui lòng điền đầy đủ thông tin bắt buộc!');
-        return;
-      }
+        if (!fullName || !email || !password || !confirmPassword) {
+          alert('Vui lòng điền đầy đủ thông tin bắt buộc!');
+          return;
+        }
 
-      if (password !== confirmPassword) {
-        alert('Mật khẩu và xác minh mật khẩu không khớp!');
-        return;
-      }
+        if (password !== confirmPassword) {
+          alert('Mật khẩu và xác minh mật khẩu không khớp!');
+          return;
+        }
 
-      // Đăng ký tài khoản trong Supabase Authentication
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password
-      });
-
-      if (authError) {
-        alert('Đăng ký thất bại: ' + authError.message);
-        return;
-      }
-
-      // Thêm thông tin vào bảng members
-      const { error: dbError } = await supabase
-        .from('members')
-        .insert([{
-          ten_thanh: tenThanh,
-          fullName,
-          dob,
+        // Đăng ký tài khoản trong Supabase Authentication
+        const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
-          memberpoint: 0,
-          user_id: authData.user.id
-        }]);
+          password
+        });
 
-      if (dbError) {
-        alert('Lỗi khi lưu thông tin: ' + dbError.message);
-        return;
+        if (authError) {
+          alert('Đăng ký thất bại: ' + authError.message);
+          return;
+        }
+
+        // Thêm thông tin vào bảng members
+        const { error: dbError } = await supabase
+          .from('members')
+          .insert([{
+            ten_thanh: tenThanh,
+            fullName,
+            dob,
+            email,
+            memberpoint: 0,
+            user_id: authData.user.id
+          }]);
+
+        if (dbError) {
+          alert('Lỗi khi lưu thông tin: ' + dbError.message);
+          return;
+        }
+
+        alert('Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.');
+        showLoginForm();
+      } catch (error) {
+        console.error('Lỗi khi đăng ký:', error);
+        alert('Lỗi khi đăng ký: ' + error.message);
       }
-
-      alert('Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.');
-      showLoginForm();
     }
 
     // Hàm đăng nhập
     async function login() {
-      const email = document.getElementById('loginEmail').value;
-      const password = document.getElementById('loginPassword').value;
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        alert('Đăng nhập thất bại: ' + error.message);
-        return;
+      try {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          alert('Đăng nhập thất bại: ' + error.message);
+          return;
+        }
+        loadUserInfo(data.user.id);
+      } catch (error) {
+        console.error('Lỗi khi đăng nhập:', error);
+        alert('Lỗi khi đăng nhập: ' + error.message);
       }
-      loadUserInfo(data.user.id);
     }
 
     // Hàm đặt lại mật khẩu
     async function resetPassword() {
-      const email = document.getElementById('loginEmail').value;
-      if (!email) {
-        alert('Vui lòng nhập email!');
-        return;
-      }
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://your-username.github.io/user.html'
-      });
-      if (error) {
-        alert('Lỗi khi gửi email đặt lại mật khẩu: ' + error.message);
-      } else {
-        alert('Email đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư!');
+      try {
+        const email = document.getElementById('loginEmail').value;
+        if (!email) {
+          alert('Vui lòng nhập email!');
+          return;
+        }
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: 'https://your-username.github.io/user.html'
+        });
+        if (error) {
+          alert('Lỗi khi gửi email đặt lại mật khẩu: ' + error.message);
+        } else {
+          alert('Email đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư!');
+        }
+      } catch (error) {
+        console.error('Lỗi khi đặt lại mật khẩu:', error);
+        alert('Lỗi khi đặt lại mật khẩu: ' + error.message);
       }
     }
 
     // Hàm tải thông tin người dùng
     async function loadUserInfo(userId) {
-      const { data, error } = await supabase
-        .from('members')
-        .select('ten_thanh, fullName, dob, email, memberpoint')
-        .eq('user_id', userId)
-        .single();
-      if (error) {
+      try {
+        const { data, error } = await supabase
+          .from('members')
+          .select('ten_thanh, fullName, dob, email, memberpoint')
+          .eq('user_id', userId)
+          .single();
+        if (error) {
+          console.error('Lỗi khi tải thông tin:', error);
+          alert('Không tìm thấy thông tin người dùng!');
+          logout();
+          return;
+        }
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('signupForm').style.display = 'none';
+        document.getElementById('userInfo').style.display = 'block';
+        document.getElementById('tenThanh').textContent = data.ten_thanh || 'Chưa cập nhật';
+        document.getElementById('fullName').textContent = data.fullName;
+        document.getElementById('dob').textContent = data.dob || 'Chưa cập nhật';
+        document.getElementById('email').textContent = data.email;
+        document.getElementById('memberPoint').textContent = data.memberpoint;
+      } catch (error) {
         console.error('Lỗi khi tải thông tin:', error);
-        alert('Không tìm thấy thông tin người dùng!');
-        logout();
-        return;
+        alert('Lỗi khi tải thông tin: ' + error.message);
       }
-      document.getElementById('loginForm').style.display = 'none';
-      document.getElementById('signupForm').style.display = 'none';
-      document.getElementById('userInfo').style.display = 'block';
-      document.getElementById('tenThanh').textContent = data.ten_thanh || 'Chưa cập nhật';
-      document.getElementById('fullName').textContent = data.fullName;
-      document.getElementById('dob').textContent = data.dob || 'Chưa cập nhật';
-      document.getElementById('email').textContent = data.email;
-      document.getElementById('memberPoint').textContent = data.memberpoint;
     }
 
     // Hàm đăng xuất
     async function logout() {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
+      try {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          console.error('Lỗi khi đăng xuất:', error);
+          alert('Lỗi khi đăng xuất: ' + error.message);
+        }
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('signupForm').style.display = 'none';
+        document.getElementById('userInfo').style.display = 'none';
+        document.getElementById('loginEmail').value = '';
+        document.getElementById('loginPassword').value = '';
+      } catch (error) {
         console.error('Lỗi khi đăng xuất:', error);
+        alert('Lỗi khi đăng xuất: ' + error.message);
       }
-      document.getElementById('loginForm').style.display = 'block';
-      document.getElementById('signupForm').style.display = 'none';
-      document.getElementById('userInfo').style.display = 'none';
-      document.getElementById('loginEmail').value = '';
-      document.getElementById('loginPassword').value = '';
     }
   </script>
 </body>
