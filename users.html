@@ -87,6 +87,7 @@
       <input type="email" id="email" placeholder="Email">
       <input type="password" id="password" placeholder="Mật khẩu">
       <button onclick="login()">Đăng nhập</button>
+      <button onclick="resetPassword()">Quên mật khẩu</button>
     </div>
     <div id="userInfo" class="user-info" style="display: none;">
       <p><strong>Họ và tên:</strong> <span id="fullName"></span></p>
@@ -108,8 +109,8 @@
 
   <script>
     // Khởi tạo Supabase client
-    const supabaseUrl = 'https://lkoyeuhoxktezjawveoi.supabase.co'; // Thay bằng Project URL
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxrb3lldWhveGt0ZXpqYXd2ZW9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1MTkwNjksImV4cCI6MjA2NzA5NTA2OX0.f2v6ycJcYcL-K7y5shEvRtNs6e5zIIf9er5kHjJeQzs'; // Thay bằng Anon Key
+    const supabaseUrl = 'YOUR_SUPABASE_URL'; // Thay bằng Project URL
+    const supabaseKey = 'YOUR_ANON_KEY'; // Thay bằng Anon Key
     const supabase = Supabase.createClient(supabaseUrl, supabaseKey);
 
     // Kiểm tra trạng thái đăng nhập khi tải trang
@@ -133,6 +134,23 @@
         return;
       }
       loadUserInfo(email);
+    }
+
+    // Hàm đặt lại mật khẩu
+    async function resetPassword() {
+      const email = document.getElementById('email').value;
+      if (!email) {
+        alert('Vui lòng nhập email!');
+        return;
+      }
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://your-username.github.io/user.html'
+      });
+      if (error) {
+        alert('Lỗi khi gửi email đặt lại mật khẩu: ' + error.message);
+      } else {
+        alert('Email đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư!');
+      }
     }
 
     // Hàm tải thông tin người dùng
@@ -179,4 +197,4 @@
     }
   </script>
 </body>
-</html>
+</html
