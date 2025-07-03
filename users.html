@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thông tin cá nhân</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f4f4f4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 600px;
+      width: 100%;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
+      color: #d32f2f;
+      text-align: center;
+    }
+    .login-form, .user-info {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    input {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      width: 100%;
+      max-width: 300px;
+    }
+    button {
+      padding: 8px 16px;
+      background-color: #d32f2f;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #b71c1c;
+    }
+    .user-info p {
+      margin: 5px 0;
+    }
+    .user-info strong {
+      color: #d32f2f;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #d32f2f;
+      color: white;
+    }
+    @media (max-width: 600px) {
+      .container {
+        padding: 15px;
+      }
+      input, button {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Thông tin cá nhân</h2>
+    <div id="loginForm" class="login-form">
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="password" placeholder="Mật khẩu">
+      <button onclick="login()">Đăng nhập</button>
+    </div>
+    <div id="userInfo" class="user-info" style="display: none;">
+      <p><strong>Họ và tên:</strong> <span id="fullName"></span></p>
+      <p><strong>Lớp:</strong> <span id="class"></span></p>
+      <p><strong>Điểm tổng:</strong> <span id="memberPoint"></span></p>
+      <h3>Điểm hàng tháng</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Tháng</th>
+            <th>Điểm</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyPointsTable"></tbody>
+      </table>
+      <button onclick="logout()">Đăng xuất</button>
+    </div>
+  </div>
+
+  <script>
+    // Khởi tạo Supabase client
+    const supabaseUrl = 'https://lkoyeuhoxktezjawveoi.supabase.co'; // Thay bằng Project URL
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxrb3lldWhveGt0ZXpqYXd2ZW9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1MTkwNjksImV4cCI6MjA2NzA5NTA2OX0.f2v6ycJcYcL-K7y5shEvRtNs6e5zIIf9er5kHjJeQzs'; // Thay bằng Anon Key
+    const supabase = Supabase.createClient(supabaseUrl, supabaseKey);
+
+    // Kiểm tra trạng thái đăng nhập khi tải trang
+    window.onload = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        loadUserInfo(user.email);
+      } else {
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('userInfo').style.display = 'none';
+      }
+    };
+
+    // Hàm đăng nhập
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        alert('Đăng nhập thất bại: ' + error.message);
+        return;
+      }
+      loadUserInfo(email);
+    }
+
+    // Hàm tải thông tin người dùng
+    async function loadUserInfo(email) {
+      const { data, error } = await supabase
+        .from('members')
+        .select('fullName, class, memberpoint, monthlyPoints')
+        .eq('email', email)
+        .single();
+      if (error) {
+        console.error('Lỗi khi tải thông tin:', error);
+        alert('Không tìm thấy thông tin người dùng!');
+        logout();
+        return;
+      }
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('userInfo').style.display = 'block';
+      document.getElementById('fullName').textContent = data.fullName;
+      document.getElementById('class').textContent = data.class;
+      document.getElementById('memberPoint').textContent = data.memberpoint;
+
+      const monthlyPointsTable = document.getElementById('monthlyPointsTable');
+      monthlyPointsTable.innerHTML = '';
+      data.monthlyPoints.forEach(point => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${point.month}</td>
+          <td>${point.points}</td>
+        `;
+        monthlyPointsTable.appendChild(row);
+      });
+    }
+
+    // Hàm đăng xuất
+    async function logout() {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Lỗi khi đăng xuất:', error);
+      }
+      document.getElementById('loginForm').style.display = 'block';
+      document.getElementById('userInfo').style.display = 'none';
+      document.getElementById('email').value = '';
+      document.getElementById('password').value = '';
+    }
+  </script>
+</body>
+</html>
