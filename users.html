@@ -23,11 +23,11 @@
       border-radius: 8px;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
-    h2 {
+    h2, h3 {
       color: #d32f2f;
       text-align: center;
     }
-    .login-form, .user-info {
+    .login-form, .signup-form, .user-info {
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -56,19 +56,13 @@
     .user-info strong {
       color: #d32f2f;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
+    .toggle-link {
+      color: #d32f2f;
+      cursor: pointer;
+      text-align: center;
     }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: left;
-    }
-    th {
-      background-color: #d32f2f;
-      color: white;
+    .toggle-link:hover {
+      text-decoration: underline;
     }
     @media (max-width: 600px) {
       .container {
@@ -84,25 +78,30 @@
   <div class="container">
     <h2>Thông tin cá nhân</h2>
     <div id="loginForm" class="login-form">
-      <input type="email" id="email" placeholder="Email">
-      <input type="password" id="password" placeholder="Mật khẩu">
+      <h3>Đăng nhập</h3>
+      <input type="email" id="loginEmail" placeholder="Email">
+      <input type="password" id="loginPassword" placeholder="Mật khẩu">
       <button onclick="login()">Đăng nhập</button>
       <button onclick="resetPassword()">Quên mật khẩu</button>
+      <p class="toggle-link" onclick="showSignupForm()">Chưa có tài khoản? Đăng ký ngay</p>
+    </div>
+    <div id="signupForm" class="signup-form" style="display: none;">
+      <h3>Đăng ký</h3>
+      <input type="text" id="tenThanh" placeholder="Tên Thánh">
+      <input type="text" id="fullName" placeholder="Họ và Tên">
+      <input type="date" id="dob" placeholder="Ngày/Tháng/Năm sinh">
+      <input type="email" id="signupEmail" placeholder="Email">
+      <input type="password" id="signupPassword" placeholder="Mật khẩu">
+      <input type="password" id="confirmPassword" placeholder="Xác minh mật khẩu">
+      <button onclick="signup()">Đăng ký</button>
+      <p class="toggle-link" onclick="showLoginForm()">Đã có tài khoản? Đăng nhập</p>
     </div>
     <div id="userInfo" class="user-info" style="display: none;">
-      <p><strong>Họ và tên:</strong> <span id="fullName"></span></p>
-      <p><strong>Lớp:</strong> <span id="class"></span></p>
-      <p><strong>Điểm tổng:</strong> <span id="memberPoint"></span></p>
-      <h3>Điểm hàng tháng</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Tháng</th>
-            <th>Điểm</th>
-          </tr>
-        </thead>
-        <tbody id="monthlyPointsTable"></tbody>
-      </table>
+      <p><strong>Tên Thánh:</strong> <span id="tenThanh"></span></p>
+      <p><strong>Họ và Tên:</strong> <span id="fullName"></span></p>
+      <p><strong>Ngày sinh:</strong> <span id="dob"></span></p>
+      <p><strong>Email:</strong> <span id="email"></span></p>
+      <p><strong>Điểm:</strong> <span id="memberPoint"></span></p>
       <button onclick="logout()">Đăng xuất</button>
     </div>
   </div>
@@ -111,34 +110,101 @@
     // Khởi tạo Supabase client
     const supabaseUrl = 'https://lkoyeuhoxktezjawveoi.supabase.co'; // Thay bằng Project URL
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxrb3lldWhveGt0ZXpqYXd2ZW9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1MTkwNjksImV4cCI6MjA2NzA5NTA2OX0.f2v6ycJcYcL-K7y5shEvRtNs6e5zIIf9er5kHjJeQzs'; // Thay bằng Anon Key
+
     const supabase = Supabase.createClient(supabaseUrl, supabaseKey);
 
     // Kiểm tra trạng thái đăng nhập khi tải trang
     window.onload = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        loadUserInfo(user.email);
+        loadUserInfo(user.id);
       } else {
         document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('signupForm').style.display = 'none';
         document.getElementById('userInfo').style.display = 'none';
       }
     };
 
+    // Hàm chuyển sang form đăng ký
+    function showSignupForm() {
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('signupForm').style.display = 'block';
+      document.getElementById('userInfo').style.display = 'none';
+    }
+
+    // Hàm chuyển sang form đăng nhập
+    function showLoginForm() {
+      document.getElementById('loginForm').style.display = 'block';
+      document.getElementById('signupForm').style.display = 'none';
+      document.getElementById('userInfo').style.display = 'none';
+    }
+
+    // Hàm đăng ký
+    async function signup() {
+      const tenThanh = document.getElementById('tenThanh').value;
+      const fullName = document.getElementById('fullName').value;
+      const dob = document.getElementById('dob').value;
+      const email = document.getElementById('signupEmail').value;
+      const password = document.getElementById('signupPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (!fullName || !email || !password || !confirmPassword) {
+        alert('Vui lòng điền đầy đủ thông tin bắt buộc!');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        alert('Mật khẩu và xác minh mật khẩu không khớp!');
+        return;
+      }
+
+      // Đăng ký tài khoản trong Supabase Authentication
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password
+      });
+
+      if (authError) {
+        alert('Đăng ký thất bại: ' + authError.message);
+        return;
+      }
+
+      // Thêm thông tin vào bảng members
+      const { error: dbError } = await supabase
+        .from('members')
+        .insert([{
+          ten_thanh: tenThanh,
+          fullName,
+          dob,
+          email,
+          memberpoint: 0,
+          user_id: authData.user.id
+        }]);
+
+      if (dbError) {
+        alert('Lỗi khi lưu thông tin: ' + dbError.message);
+        return;
+      }
+
+      alert('Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.');
+      showLoginForm();
+    }
+
     // Hàm đăng nhập
     async function login() {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         alert('Đăng nhập thất bại: ' + error.message);
         return;
       }
-      loadUserInfo(email);
+      loadUserInfo(data.user.id);
     }
 
     // Hàm đặt lại mật khẩu
     async function resetPassword() {
-      const email = document.getElementById('email').value;
+      const email = document.getElementById('loginEmail').value;
       if (!email) {
         alert('Vui lòng nhập email!');
         return;
@@ -154,11 +220,11 @@
     }
 
     // Hàm tải thông tin người dùng
-    async function loadUserInfo(email) {
+    async function loadUserInfo(userId) {
       const { data, error } = await supabase
         .from('members')
-        .select('fullName, class, memberpoint, monthlyPoints')
-        .eq('email', email)
+        .select('ten_thanh, fullName, dob, email, memberpoint')
+        .eq('user_id', userId)
         .single();
       if (error) {
         console.error('Lỗi khi tải thông tin:', error);
@@ -167,21 +233,13 @@
         return;
       }
       document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('signupForm').style.display = 'none';
       document.getElementById('userInfo').style.display = 'block';
+      document.getElementById('tenThanh').textContent = data.ten_thanh || 'Chưa cập nhật';
       document.getElementById('fullName').textContent = data.fullName;
-      document.getElementById('class').textContent = data.class;
+      document.getElementById('dob').textContent = data.dob || 'Chưa cập nhật';
+      document.getElementById('email').textContent = data.email;
       document.getElementById('memberPoint').textContent = data.memberpoint;
-
-      const monthlyPointsTable = document.getElementById('monthlyPointsTable');
-      monthlyPointsTable.innerHTML = '';
-      data.monthlyPoints.forEach(point => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${point.month}</td>
-          <td>${point.points}</td>
-        `;
-        monthlyPointsTable.appendChild(row);
-      });
     }
 
     // Hàm đăng xuất
@@ -191,10 +249,11 @@
         console.error('Lỗi khi đăng xuất:', error);
       }
       document.getElementById('loginForm').style.display = 'block';
+      document.getElementById('signupForm').style.display = 'none';
       document.getElementById('userInfo').style.display = 'none';
-      document.getElementById('email').value = '';
-      document.getElementById('password').value = '';
+      document.getElementById('loginEmail').value = '';
+      document.getElementById('loginPassword').value = '';
     }
   </script>
 </body>
-</html
+</html>
