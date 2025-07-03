@@ -28,20 +28,16 @@
     button {
       padding: 5px 10px;
       margin: 2px;
-      cursor: pointer_episode
-      pointer;
+      cursor: pointer;
     }
     .form-container {
       margin-bottom: 20px;
     }
-    input, textarea {
+    input {
       margin: 5px;
       padding: 5px;
       width: 100%;
       max-width: 300px;
-    }
-    textarea {
-      height: 100px;
     }
   </style>
 </head>
@@ -50,20 +46,22 @@
   <div class="form-container">
     <h3>Thêm/Sửa thành viên</h3>
     <input type="hidden" id="memberId">
-    <input type="text" id="fullName" placeholder="Họ và tên">
-    <input type="text" id="class" placeholder="Tên lớp">
-    <input type="number" id="memberPoint" placeholder="Điểm tổng">
-    <textarea id="monthlyPoints" placeholder='Điểm hàng tháng (JSON, ví dụ: [{"month": "2025-07", "points": 10}]'></textarea>
+    <input type="text" id="tenThanh" placeholder="Tên Thánh">
+    <input type="text" id="fullName" placeholder="Họ và Tên">
+    <input type="date" id="dob" placeholder="Ngày/Tháng/Năm sinh">
+    <input type="email" id="email" placeholder="Email">
+    <input type="number" id="memberPoint" placeholder="Điểm">
     <button onclick="upsertMember()">Lưu</button>
   </div>
   <table id="memberTable">
     <thead>
       <tr>
         <th>ID</th>
-        <th>Họ và tên</th>
-        <th>Lớp</th>
-        <th>Điểm tổng</th>
-        <th>Điểm hàng tháng</th>
+        <th>Tên Thánh</th>
+        <th>Họ và Tên</th>
+        <th>Ngày sinh</th>
+        <th>Email</th>
+        <th>Điểm</th>
         <th>Thao tác</th>
       </tr>
     </thead>
@@ -71,14 +69,6 @@
   </table>
 
   <script>
-        window.onload = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        window.location.href = 'index.html'; // Chuyển hướng nếu chưa đăng nhập
-    } else {
-        loadMembers();
-    }
-    };
     // Khởi tạo Supabase client
     const supabaseUrl = 'https://lkoyeuhoxktezjawveoi.supabase.co'; // Thay bằng Project URL
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxrb3lldWhveGt0ZXpqYXd2ZW9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1MTkwNjksImV4cCI6MjA2NzA5NTA2OX0.f2v6ycJcYcL-K7y5shEvRtNs6e5zIIf9er5kHjJeQzs'; // Thay bằng Anon Key
@@ -99,12 +89,13 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${member.id}</td>
+          <td>${member.ten_thanh || 'Chưa cập nhật'}</td>
           <td>${member.fullName}</td>
-          <td>${member.class}</td>
+          <td>${member.dob || 'Chưa cập nhật'}</td>
+          <td>${member.email}</td>
           <td>${member.memberpoint}</td>
-          <td>${JSON.stringify(member.monthlyPoints)}</td>
           <td>
-            <button onclick="editMember(${member.id}, '${member.fullName}', '${member.class}', ${member.memberpoint}, '${JSON.stringify(member.monthlyPoints)}')">Sửa</button>
+            <button onclick="editMember(${member.id}, '${member.ten_thanh || ''}', '${member.fullName}', '${member.dob || ''}', '${member.email}', ${member.memberpoint})">Sửa</button>
             <button onclick="deleteMember(${member.id})">Xóa</button>
           </td>
         `;
@@ -115,13 +106,14 @@
     // Hàm thêm hoặc sửa thành viên
     async function upsertMember() {
       const id = document.getElementById('memberId').value;
+      const tenThanh = document.getElementById('tenThanh').value;
       const fullName = document.getElementById('fullName').value;
-      const className = document.getElementById('class').value;
+      const dob = document.getElementById('dob').value;
+      const email = document.getElementById('email').value;
       const memberpoint = parseInt(document.getElementById('memberPoint').value);
-      const monthlyPoints = JSON.parse(document.getElementById('monthlyPoints').value || '[]');
 
-      if (!fullName || !className || !memberpoint) {
-        alert('Vui lòng điền đầy đủ thông tin!');
+      if (!fullName || !email) {
+        alert('Vui lòng điền đầy đủ thông tin bắt buộc!');
         return;
       }
 
@@ -129,39 +121,36 @@
         // Cập nhật thành viên
         const { error } = await supabase
           .from('members')
-          .update({ fullName, class: className, memberpoint, monthlyPoints })
+          .update({ ten_thanh: tenThanh, fullName, dob, email, memberpoint })
           .eq('id', id);
         if (error) {
           console.error('Lỗi khi cập nhật:', error);
           return;
         }
       } else {
-        // Thêm thành viên mới
-        const { error } = await supabase
-          .from('members')
-          .insert([{ fullName, class: className, memberpoint, monthlyPoints }]);
-        if (error) {
-          console.error('Lỗi khi thêm:', error);
-          return;
-        }
+        // Thêm thành viên mới (admin cần thêm user_id thủ công hoặc liên kết với Authentication)
+        alert('Vui lòng thêm thành viên qua đăng ký ở user.html hoặc liên kết user_id!');
+        return;
       }
 
       // Reset form và tải lại danh sách
       document.getElementById('memberId').value = '';
+      document.getElementById('tenThanh').value = '';
       document.getElementById('fullName').value = '';
-      document.getElementById('class').value = '';
+      document.getElementById('dob').value = '';
+      document.getElementById('email').value = '';
       document.getElementById('memberPoint').value = '';
-      document.getElementById('monthlyPoints').value = '';
       loadMembers();
     }
 
     // Hàm sửa thành viên
-    function editMember(id, fullName, className, memberpoint, monthlyPoints) {
+    function editMember(id, tenThanh, fullName, dob, email, memberpoint) {
       document.getElementById('memberId').value = id;
+      document.getElementById('tenThanh').value = tenThanh;
       document.getElementById('fullName').value = fullName;
-      document.getElementById('class').value = className;
+      document.getElementById('dob').value = dob;
+      document.getElementById('email').value = email;
       document.getElementById('memberPoint').value = memberpoint;
-      document.getElementById('monthlyPoints').value = monthlyPoints;
     }
 
     // Hàm xóa thành viên
@@ -179,8 +168,15 @@
       }
     }
 
-    // Tải danh sách khi trang được tải
-    window.onload = loadMembers;
+    // Kiểm tra đăng nhập admin
+    window.onload = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || user.email !== 'admin@example.com') {
+        window.location.href = 'index.html'; // Chuyển hướng nếu không phải admin
+      } else {
+        loadMembers();
+      }
+    };
   </script>
 </body>
 </html>
