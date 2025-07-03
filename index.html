@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng nhập</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <h2>Đăng nhập</h2>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Mật khẩu">
+  <button onclick="login()">Đăng nhập</button>
+
+  <script>
+    const supabaseUrl = 'https://lkoyeuhoxktezjawveoi.supabase.co'; // Thay bằng Project URL
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxrb3lldWhveGt0ZXpqYXd2ZW9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1MTkwNjksImV4cCI6MjA2NzA5NTA2OX0.f2v6ycJcYcL-K7y5shEvRtNs6e5zIIf9er5kHjJeQzs'; // Thay bằng Anon Key
+    const supabase = Supabase.createClient(supabaseUrl, supabaseKey);
+
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        alert('Đăng nhập thất bại: ' + error.message);
+      } else {
+        window.location.href = 'manage.html';
+      }
+    }
+  </script>
+</body>
+</html>

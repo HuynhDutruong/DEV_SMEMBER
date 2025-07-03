@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý thành viên</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f4f4f4;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #d32f2f;
+      color: white;
+    }
+    button {
+      padding: 5px 10px;
+      margin: 2px;
+      cursor: pointer_episode
+      pointer;
+    }
+    .form-container {
+      margin-bottom: 20px;
+    }
+    input, textarea {
+      margin: 5px;
+      padding: 5px;
+      width: 100%;
+      max-width: 300px;
+    }
+    textarea {
+      height: 100px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Quản lý thành viên</h2>
+  <div class="form-container">
+    <h3>Thêm/Sửa thành viên</h3>
+    <input type="hidden" id="memberId">
+    <input type="text" id="fullName" placeholder="Họ và tên">
+    <input type="text" id="class" placeholder="Tên lớp">
+    <input type="number" id="memberPoint" placeholder="Điểm tổng">
+    <textarea id="monthlyPoints" placeholder='Điểm hàng tháng (JSON, ví dụ: [{"month": "2025-07", "points": 10}]'></textarea>
+    <button onclick="upsertMember()">Lưu</button>
+  </div>
+  <table id="memberTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Họ và tên</th>
+        <th>Lớp</th>
+        <th>Điểm tổng</th>
+        <th>Điểm hàng tháng</th>
+        <th>Thao tác</th>
+      </tr>
+    </thead>
+    <tbody id="memberTableBody"></tbody>
+  </table>
+
+  <script>
+        window.onload = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        window.location.href = 'index.html'; // Chuyển hướng nếu chưa đăng nhập
+    } else {
+        loadMembers();
+    }
+    };
+    // Khởi tạo Supabase client
+    const supabaseUrl = 'https://lkoyeuhoxktezjawveoi.supabase.co'; // Thay bằng Project URL
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxrb3lldWhveGt0ZXpqYXd2ZW9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1MTkwNjksImV4cCI6MjA2NzA5NTA2OX0.f2v6ycJcYcL-K7y5shEvRtNs6e5zIIf9er5kHjJeQzs'; // Thay bằng Anon Key
+    const supabase = Supabase.createClient(supabaseUrl, supabaseKey);
+
+    // Hàm tải danh sách thành viên
+    async function loadMembers() {
+      const { data, error } = await supabase
+        .from('members')
+        .select('*');
+      if (error) {
+        console.error('Lỗi khi tải dữ liệu:', error);
+        return;
+      }
+      const tableBody = document.getElementById('memberTableBody');
+      tableBody.innerHTML = '';
+      data.forEach(member => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${member.id}</td>
+          <td>${member.fullName}</td>
+          <td>${member.class}</td>
+          <td>${member.memberpoint}</td>
+          <td>${JSON.stringify(member.monthlyPoints)}</td>
+          <td>
+            <button onclick="editMember(${member.id}, '${member.fullName}', '${member.class}', ${member.memberpoint}, '${JSON.stringify(member.monthlyPoints)}')">Sửa</button>
+            <button onclick="deleteMember(${member.id})">Xóa</button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    // Hàm thêm hoặc sửa thành viên
+    async function upsertMember() {
+      const id = document.getElementById('memberId').value;
+      const fullName = document.getElementById('fullName').value;
+      const className = document.getElementById('class').value;
+      const memberpoint = parseInt(document.getElementById('memberPoint').value);
+      const monthlyPoints = JSON.parse(document.getElementById('monthlyPoints').value || '[]');
+
+      if (!fullName || !className || !memberpoint) {
+        alert('Vui lòng điền đầy đủ thông tin!');
+        return;
+      }
+
+      if (id) {
+        // Cập nhật thành viên
+        const { error } = await supabase
+          .from('members')
+          .update({ fullName, class: className, memberpoint, monthlyPoints })
+          .eq('id', id);
+        if (error) {
+          console.error('Lỗi khi cập nhật:', error);
+          return;
+        }
+      } else {
+        // Thêm thành viên mới
+        const { error } = await supabase
+          .from('members')
+          .insert([{ fullName, class: className, memberpoint, monthlyPoints }]);
+        if (error) {
+          console.error('Lỗi khi thêm:', error);
+          return;
+        }
+      }
+
+      // Reset form và tải lại danh sách
+      document.getElementById('memberId').value = '';
+      document.getElementById('fullName').value = '';
+      document.getElementById('class').value = '';
+      document.getElementById('memberPoint').value = '';
+      document.getElementById('monthlyPoints').value = '';
+      loadMembers();
+    }
+
+    // Hàm sửa thành viên
+    function editMember(id, fullName, className, memberpoint, monthlyPoints) {
+      document.getElementById('memberId').value = id;
+      document.getElementById('fullName').value = fullName;
+      document.getElementById('class').value = className;
+      document.getElementById('memberPoint').value = memberpoint;
+      document.getElementById('monthlyPoints').value = monthlyPoints;
+    }
+
+    // Hàm xóa thành viên
+    async function deleteMember(id) {
+      if (confirm('Bạn có chắc muốn xóa thành viên này?')) {
+        const { error } = await supabase
+          .from('members')
+          .delete()
+          .eq('id', id);
+        if (error) {
+          console.error('Lỗi khi xóa:', error);
+          return;
+        }
+        loadMembers();
+      }
+    }
+
+    // Tải danh sách khi trang được tải
+    window.onload = loadMembers;
+  </script>
+</body>
+</html>
